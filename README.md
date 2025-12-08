@@ -2,12 +2,12 @@
 
 Interactive 3D topographical map viewer using real elevation data. Search any location on Earth and explore its terrain in 3D.
 
-**Live:** [map.psiegel.org](https://map.psiegel.org)
+**Live:** [3d-map.psiegel.org](https://3d-map.psiegel.org)
 
 ## Features
 
 - **Location Search** — Enter any place name or coordinates
-- **Real Elevation Data** — Powered by Open-Meteo's global elevation API
+- **Real Elevation Data** — Powered by Open-Topo-Data's SRTM elevation API
 - **3D Visualization** — Rotate, pan, and zoom the terrain with Three.js
 - **Multiple Color Modes** — Terrain gradient or satellite-style coloring
 - **Contour Lines** — Toggle topographic contours
@@ -18,12 +18,13 @@ Interactive 3D topographical map viewer using real elevation data. Search any lo
 ## Architecture
 
 ```
-map.psiegel.org          →  Cloudflare Pages (index.html)
+3d-map.psiegel.org       →  Cloudflare Pages (index.html)
 map-api.psiegel.org      →  Cloudflare Worker (worker.js)
 ```
 
 - **Frontend:** Static HTML/JS using Three.js for 3D rendering
-- **Backend:** Cloudflare Worker proxying geocoding (Nominatim) and elevation (Open-Meteo) APIs
+- **Backend:** Cloudflare Worker proxying geocoding (Nominatim) and elevation (Open-Topo-Data) APIs
+- **Caching:** KV namespace stores results for 30 days
 
 ## Try These Locations
 
