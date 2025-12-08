@@ -5,6 +5,9 @@ compatibility_date = "2024-01-01"
 # Custom domain (already configured in Cloudflare dashboard)
 # routes = [{ pattern = "map-api.psiegel.org", custom_domain = true }]
 
+[observability]
+enabled = false
+
 [observability.logs]
 enabled = false
 head_sampling_rate = 1
