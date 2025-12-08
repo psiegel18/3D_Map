@@ -1,8 +1,8 @@
 // Cloudflare Worker: Terrain API Proxy
-// Deploy this to your Cloudflare Worker at map-api.psiegel.org
+// Uses Open-Topo-Data for elevation and KV for caching
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -65,39 +65,68 @@ export default {
         });
       }
 
+      // Round coordinates for cache key consistency
+      const cacheKey = `terrain:${centerLat.toFixed(4)}:${centerLon.toFixed(4)}:${size}:${grid}`;
+
+      // Check KV cache first
+      if (env.CACHE) {
+        const cached = await env.CACHE.get(cacheKey, 'json');
+        if (cached) {
+          return new Response(JSON.stringify({ ...cached, cached: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       // Generate grid of coordinates
       const kmPerDegLat = 111;
       const kmPerDegLon = 111 * Math.cos(centerLat * Math.PI / 180);
-      const halfSize = size / 2;
 
-      const lats = [];
-      const lons = [];
-
+      const locations = [];
       for (let i = 0; i < grid; i++) {
         for (let j = 0; j < grid; j++) {
           const latOffset = (i / (grid - 1) - 0.5) * size / kmPerDegLat;
           const lonOffset = (j / (grid - 1) - 0.5) * size / kmPerDegLon;
-          lats.push((centerLat + latOffset).toFixed(6));
-          lons.push((centerLon + lonOffset).toFixed(6));
+          locations.push({
+            lat: (centerLat + latOffset).toFixed(6),
+            lon: (centerLon + lonOffset).toFixed(6)
+          });
         }
       }
 
-      // Fetch elevation data from Open-Meteo
-      const elevUrl = `https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`;
-      const elevRes = await fetch(elevUrl);
+      // Fetch elevation data from Open-Topo-Data in batches
+      // API limit: 100 locations per request
+      const BATCH_SIZE = 100;
+      const elevations = [];
 
-      if (!elevRes.ok) {
-        const errorText = await elevRes.text();
-        throw new Error(`Elevation API failed: ${elevRes.status} - ${errorText.slice(0, 200)}`);
+      for (let i = 0; i < locations.length; i += BATCH_SIZE) {
+        const batch = locations.slice(i, i + BATCH_SIZE);
+        const locationsParam = batch.map(l => `${l.lat},${l.lon}`).join('|');
+
+        const elevUrl = `https://api.opentopodata.org/v1/srtm90m?locations=${locationsParam}`;
+        const elevRes = await fetch(elevUrl);
+
+        if (!elevRes.ok) {
+          const errorText = await elevRes.text();
+          throw new Error(`Elevation API failed: ${elevRes.status} - ${errorText.slice(0, 200)}`);
+        }
+
+        const elevData = await elevRes.json();
+
+        if (elevData.status !== 'OK' || !elevData.results) {
+          throw new Error(`Elevation API error: ${elevData.error || 'Unknown error'}`);
+        }
+
+        for (const result of elevData.results) {
+          elevations.push(result.elevation);
+        }
+
+        // Rate limit: wait between batches (except for last batch)
+        if (i + BATCH_SIZE < locations.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
 
-      const elevData = await elevRes.json();
-
-      if (!elevData.elevation || !Array.isArray(elevData.elevation)) {
-        throw new Error('Invalid elevation data received');
-      }
-
-      const elevations = elevData.elevation;
       const validElevations = elevations.filter(e => e !== null && !isNaN(e));
 
       if (validElevations.length === 0) {
@@ -107,14 +136,23 @@ export default {
       const minElev = Math.min(...validElevations);
       const maxElev = Math.max(...validElevations);
 
-      return new Response(JSON.stringify({
+      const result = {
         name,
         center: [centerLat, centerLon],
         elevations,
         minElev,
         maxElev,
         grid
-      }), {
+      };
+
+      // Store in KV cache (expires in 30 days)
+      if (env.CACHE) {
+        await env.CACHE.put(cacheKey, JSON.stringify(result), {
+          expirationTtl: 60 * 60 * 24 * 30
+        });
+      }
+
+      return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
