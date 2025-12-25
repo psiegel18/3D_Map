@@ -53,6 +53,14 @@
     .scale-bar { position: absolute; bottom: 10px; right: 120px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 3px; font-size: 9px; color: #ccc; }
     .scale-bar .bar { height: 3px; background: #fff; margin-top: 2px; border-radius: 1px; }
 
+    /* Elevation legend */
+    .elev-legend { position: absolute; top: 70px; left: 10px; background: rgba(15,15,26,0.92); border: 1px solid #333; border-radius: 6px; padding: 8px; font-size: 9px; width: 55px; }
+    .elev-legend .title { color: #9ca3af; margin-bottom: 6px; text-align: center; font-weight: 500; }
+    .elev-legend .gradient-bar { height: 120px; width: 14px; border-radius: 2px; margin: 0 auto; position: relative; }
+    .elev-legend .labels { display: flex; flex-direction: column; justify-content: space-between; height: 120px; margin-left: 20px; margin-top: -120px; color: #ccc; }
+    .elev-legend .label { font-size: 9px; line-height: 1; }
+    .elev-legend .exag { margin-top: 8px; text-align: center; color: #f59e0b; font-weight: 600; font-size: 10px; }
+
     /* Loading */
     .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,15,26,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
     .loading-overlay .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -165,6 +173,17 @@
     <div class="scale-bar" id="scaleBar" style="display: none;">
       <span id="scaleText">1 km</span>
       <div class="bar" id="scaleBarInner" style="width: 50px;"></div>
+    </div>
+
+    <div class="elev-legend" id="elevLegend" style="display: none;">
+      <div class="title">Elevation</div>
+      <div class="gradient-bar" id="elevGradient"></div>
+      <div class="labels">
+        <div class="label" id="elevMax">0m</div>
+        <div class="label" id="elevMid">0m</div>
+        <div class="label" id="elevMin">0m</div>
+      </div>
+      <div class="exag" id="elevExag">2× height</div>
     </div>
 
     <div class="loading-overlay" id="loading" style="display: none;">
@@ -332,7 +351,7 @@ function setupUI() {
 
   // Controls
   document.getElementById('areaSize').oninput = e => { areaSize = parseInt(e.target.value); document.getElementById('areaSizeVal').textContent = areaSize + 'km'; };
-  document.getElementById('exaggeration').oninput = e => { exaggeration = parseFloat(e.target.value); document.getElementById('exaggerationVal').textContent = exaggeration + 'x'; buildTerrain(); };
+  document.getElementById('exaggeration').oninput = e => { exaggeration = parseFloat(e.target.value); document.getElementById('exaggerationVal').textContent = exaggeration + 'x'; updateElevationLegend(); buildTerrain(); };
   document.getElementById('sunAngle').oninput = e => { sunAngle = parseInt(e.target.value); document.getElementById('sunAngleVal').textContent = sunAngle + '°'; updateSunPosition(); };
   document.getElementById('gridSize').onchange = e => { GRID_SIZE = parseInt(e.target.value); };
 
@@ -431,6 +450,31 @@ function updateSunPosition() {
   if (!mainLight) return;
   const rad = sunAngle * Math.PI / 180;
   mainLight.position.set(Math.cos(rad) * 100, 80, Math.sin(rad) * 100);
+}
+
+function updateElevationLegend() {
+  if (!elevationData) return;
+  const { minE, maxE } = elevationData;
+  const range = maxE - minE;
+  const mid = (minE + maxE) / 2;
+
+  // Update labels
+  document.getElementById('elevMax').textContent = maxE.toFixed(0) + 'm';
+  document.getElementById('elevMid').textContent = mid.toFixed(0) + 'm';
+  document.getElementById('elevMin').textContent = minE.toFixed(0) + 'm';
+  document.getElementById('elevExag').textContent = exaggeration + '× height';
+
+  // Create gradient matching terrain colors
+  const gradientBar = document.getElementById('elevGradient');
+  const stops = [];
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    const [r, g, b] = getTerrainColor(1 - t); // Invert so high is at top
+    stops.push(`rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)}) ${t*100}%`);
+  }
+  gradientBar.style.background = `linear-gradient(to bottom, ${stops.join(', ')})`;
+
+  document.getElementById('elevLegend').style.display = 'block';
 }
 
 function onMouseDown(e) {
@@ -1033,6 +1077,7 @@ async function buildTerrain() {
 
   if (showContours) buildContours();
   updateWaterPlane();
+  updateElevationLegend();
 
   // Re-draw GPX if exists
   if (gpxLine) {
