@@ -8,116 +8,265 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; background: #0f0f1a; color: #fff; height: 100vh; display: flex; flex-direction: column; }
-    .header { padding: 12px 16px; background: #1a1a2e; border-bottom: 1px solid #333; }
-    .row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
-    .btn { padding: 6px 12px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; background: #374151; color: #fff; }
+    body.fullscreen .header, body.fullscreen .footer { display: none; }
+    body.fullscreen .canvas-container { height: 100vh; }
+    .header { padding: 10px 16px; background: #1a1a2e; border-bottom: 1px solid #333; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+    .btn { padding: 6px 12px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; background: #374151; color: #fff; transition: background 0.2s; }
+    .btn:hover { background: #4b5563; }
     .btn.active, .btn.primary { background: #6366f1; }
-    .btn.primary { padding: 10px 24px; font-size: 14px; font-weight: 600; }
-    .btn:disabled { background: #4b5563; cursor: not-allowed; }
-    input[type="text"] { padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #252540; color: #fff; font-size: 14px; outline: none; }
-    .search-input { flex: 1; min-width: 180px; }
-    .coord-input { width: 100px; }
-    .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 12px; }
-    .control-group { display: flex; align-items: center; gap: 6px; }
+    .btn.primary { padding: 8px 20px; font-size: 13px; font-weight: 600; }
+    .btn:disabled { background: #4b5563; cursor: not-allowed; opacity: 0.6; }
+    .btn-icon { padding: 6px 8px; font-size: 14px; min-width: 32px; }
+    input[type="text"], select { padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background: #252540; color: #fff; font-size: 13px; outline: none; }
+    select { cursor: pointer; }
+    .search-input { flex: 1; min-width: 160px; }
+    .coord-input { width: 90px; }
+    .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 11px; }
+    .control-group { display: flex; align-items: center; gap: 5px; }
     .control-group span { color: #9ca3af; }
-    input[type="range"] { width: 60px; }
+    .control-group label { color: #9ca3af; white-space: nowrap; }
+    input[type="range"] { width: 50px; cursor: pointer; }
     input[type="checkbox"] { cursor: pointer; }
-    .error { color: #f87171; margin-top: 8px; font-size: 13px; }
+    input[type="file"] { display: none; }
+    .error { color: #f87171; margin-top: 6px; font-size: 12px; }
     .canvas-container { flex: 1; position: relative; overflow: hidden; }
     #canvas { width: 100%; height: 100%; display: block; }
-    .overlay { position: absolute; background: rgba(15,15,26,0.9); padding: 12px 16px; border-radius: 8px; font-size: 12px; border: 1px solid #333; }
-    .hover-info { top: 12px; right: 12px; font-size: 13px; padding: 8px 12px; }
-    .terrain-info { bottom: 12px; left: 12px; max-width: 320px; }
-    .terrain-info .name { font-weight: 600; margin-bottom: 6px; color: #a5b4fc; line-height: 1.3; }
-    .terrain-info .details { color: #9ca3af; }
+    .overlay { position: absolute; background: rgba(15,15,26,0.92); padding: 10px 14px; border-radius: 8px; font-size: 11px; border: 1px solid #333; pointer-events: none; }
+    .overlay.interactive { pointer-events: auto; }
+    .hover-info { top: 10px; right: 10px; font-size: 12px; padding: 6px 10px; }
+    .terrain-info { bottom: 10px; left: 10px; max-width: 280px; }
+    .terrain-info .name { font-weight: 600; margin-bottom: 4px; color: #a5b4fc; line-height: 1.3; font-size: 12px; }
+    .terrain-info .details { color: #9ca3af; font-size: 10px; }
     .placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #6b7280; }
-    .placeholder .icon { font-size: 56px; margin-bottom: 16px; }
-    .placeholder .hint { font-size: 13px; margin-top: 8px; color: #4b5563; }
-    .footer { padding: 8px 16px; background: #1a1a2e; border-top: 1px solid #333; font-size: 11px; color: #4b5563; text-align: center; }
-    .attribution { position: absolute; bottom: 12px; right: 12px; font-size: 10px; color: #666; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
+    .placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+    .placeholder .hint { font-size: 12px; margin-top: 6px; color: #4b5563; }
+    .footer { padding: 6px 16px; background: #1a1a2e; border-top: 1px solid #333; font-size: 10px; color: #4b5563; text-align: center; }
+    .attribution { position: absolute; bottom: 10px; right: 10px; font-size: 9px; color: #666; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 3px; pointer-events: auto; }
     .attribution a { color: #888; }
+
+    /* Compass */
+    .compass { position: absolute; top: 10px; left: 10px; width: 50px; height: 50px; pointer-events: none; }
+    .compass svg { width: 100%; height: 100%; }
+
+    /* Scale bar */
+    .scale-bar { position: absolute; bottom: 10px; right: 120px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 3px; font-size: 9px; color: #ccc; }
+    .scale-bar .bar { height: 3px; background: #fff; margin-top: 2px; border-radius: 1px; }
+
+    /* Loading */
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,15,26,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+    .loading-overlay .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loading-overlay .text { margin-top: 12px; color: #9ca3af; font-size: 12px; }
+    .progress-bar { width: 200px; height: 4px; background: #333; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+    .progress-bar .fill { height: 100%; background: #6366f1; transition: width 0.3s; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Modal */
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-header h3 { font-size: 16px; font-weight: 600; }
+    .modal-close { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
+    .modal textarea { width: 100%; height: 80px; background: #252540; border: 1px solid #444; border-radius: 6px; color: #fff; padding: 10px; font-size: 11px; font-family: monospace; resize: none; }
+
+    /* Profile chart */
+    .profile-panel { position: absolute; bottom: 60px; left: 10px; right: 10px; background: rgba(15,15,26,0.95); border: 1px solid #333; border-radius: 8px; padding: 12px; max-width: 400px; }
+    .profile-panel h4 { font-size: 12px; margin-bottom: 8px; color: #a5b4fc; }
+    .profile-chart { height: 80px; background: #252540; border-radius: 4px; position: relative; }
+    .profile-chart canvas { width: 100%; height: 100%; }
+    .profile-stats { display: flex; gap: 15px; margin-top: 8px; font-size: 10px; color: #9ca3af; }
+
+    /* Measurement */
+    .measure-info { position: absolute; top: 60px; right: 10px; background: rgba(15,15,26,0.95); border: 1px solid #6366f1; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #374151; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 12px; z-index: 1001; animation: fadeInOut 2s forwards; }
+    @keyframes fadeInOut { 0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 10% { opacity: 1; transform: translateX(-50%) translateY(0); } 90% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* Recent searches dropdown */
+    .recent-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #252540; border: 1px solid #444; border-radius: 6px; margin-top: 4px; max-height: 150px; overflow-y: auto; z-index: 50; }
+    .recent-dropdown div { padding: 8px 12px; cursor: pointer; font-size: 12px; }
+    .recent-dropdown div:hover { background: #374151; }
+    .search-wrapper { position: relative; flex: 1; min-width: 160px; display: flex; }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="row">
-      <div style="display: flex; gap: 4px; margin-right: 8px;">
+      <div style="display: flex; gap: 4px;">
         <button class="btn active" id="modeSearch">Search</button>
         <button class="btn" id="modeCoords">Lat/Lon</button>
       </div>
-      <div id="searchInputs">
-        <input type="text" class="search-input" id="locationInput" placeholder="Search location (e.g., Mount Everest)">
+      <div class="search-wrapper" id="searchInputs">
+        <input type="text" class="search-input" id="locationInput" placeholder="Search location..." autocomplete="off">
+        <div class="recent-dropdown" id="recentDropdown" style="display: none;"></div>
       </div>
       <div id="coordInputs" style="display: none; gap: 8px;">
         <input type="text" class="coord-input" id="latInput" placeholder="Latitude">
         <input type="text" class="coord-input" id="lonInput" placeholder="Longitude">
       </div>
+      <select id="presets">
+        <option value="">Famous Places</option>
+        <option value="Mount Everest">Mount Everest</option>
+        <option value="Grand Canyon">Grand Canyon</option>
+        <option value="Mount Fuji">Mount Fuji</option>
+        <option value="Matterhorn">Matterhorn</option>
+        <option value="Yosemite Valley">Yosemite Valley</option>
+        <option value="Mount Rainier">Mount Rainier</option>
+        <option value="Death Valley">Death Valley</option>
+        <option value="Machu Picchu">Machu Picchu</option>
+        <option value="Mount Kilimanjaro">Mt Kilimanjaro</option>
+        <option value="Santorini Greece">Santorini</option>
+      </select>
       <button class="btn primary" id="exploreBtn">Explore</button>
+      <div style="display: flex; gap: 4px; margin-left: auto;">
+        <button class="btn btn-icon" id="screenshotBtn" title="Screenshot">📷</button>
+        <button class="btn btn-icon" id="shareBtn" title="Copy Link">🔗</button>
+        <button class="btn btn-icon" id="embedBtn" title="Embed Code">📋</button>
+        <button class="btn btn-icon" id="fullscreenBtn" title="Fullscreen">⛶</button>
+      </div>
     </div>
     <div class="controls">
       <label class="control-group">Area: <input type="range" id="areaSize" min="2" max="200" value="10"> <span id="areaSizeVal">10km</span></label>
       <label class="control-group">Height: <input type="range" id="exaggeration" min="0.5" max="10" step="0.5" value="2"> <span id="exaggerationVal">2x</span></label>
-      <div style="display: flex; gap: 4px;">
+      <label class="control-group">Sun: <input type="range" id="sunAngle" min="0" max="360" value="45"> <span id="sunAngleVal">45°</span></label>
+      <div style="display: flex; gap: 3px;">
         <button class="btn active" id="viewTerrain">Terrain</button>
         <button class="btn" id="viewStreets">Streets</button>
         <button class="btn" id="viewSatellite">Satellite</button>
       </div>
+      <select id="gridSize">
+        <option value="20">20×20 (fast)</option>
+        <option value="30">30×30 (medium)</option>
+        <option value="40">40×40 (detailed)</option>
+      </select>
       <label class="control-group" style="cursor: pointer;"><input type="checkbox" id="showContours"> Contours</label>
+      <label class="control-group" style="cursor: pointer;"><input type="checkbox" id="showWater"> Water</label>
+      <label class="control-group" style="cursor: pointer;"><input type="checkbox" id="autoRotate"> Rotate</label>
+      <button class="btn" id="measureBtn">📏 Measure</button>
+      <button class="btn" id="profileBtn">📈 Profile</button>
+      <label class="btn" id="gpxLabel">📁 GPX<input type="file" id="gpxInput" accept=".gpx,.kml"></label>
     </div>
     <div class="error" id="error" style="display: none;"></div>
   </div>
 
-  <div class="canvas-container">
+  <div class="canvas-container" id="canvasContainer">
     <canvas id="canvas"></canvas>
+
+    <div class="compass" id="compass">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="rgba(0,0,0,0.5)" stroke="#444" stroke-width="2"/>
+        <polygon points="50,10 45,50 50,45 55,50" fill="#f87171" id="compassNeedle"/>
+        <polygon points="50,90 45,50 50,55 55,50" fill="#fff"/>
+        <text x="50" y="25" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">N</text>
+      </svg>
+    </div>
+
+    <div class="scale-bar" id="scaleBar" style="display: none;">
+      <span id="scaleText">1 km</span>
+      <div class="bar" id="scaleBarInner" style="width: 50px;"></div>
+    </div>
+
+    <div class="loading-overlay" id="loading" style="display: none;">
+      <div class="spinner"></div>
+      <div class="text" id="loadingText">Loading terrain...</div>
+      <div class="progress-bar"><div class="fill" id="progressFill" style="width: 0%;"></div></div>
+    </div>
+
     <div class="overlay hover-info" id="hoverInfo" style="display: none;">Elevation: <strong id="hoverElev">0</strong>m</div>
+    <div class="overlay measure-info" id="measureInfo" style="display: none;">Distance: <strong id="measureDist">0</strong>m</div>
+
     <div class="overlay terrain-info" id="terrainInfo" style="display: none;">
       <div class="name" id="terrainName"></div>
       <div class="details" id="terrainDetails"></div>
     </div>
+
     <div class="placeholder" id="placeholder">
       <div class="icon">🏔️</div>
       <div>Search for any location to explore its terrain</div>
       <div class="hint">Try: Grand Canyon, Mount Fuji, Swiss Alps</div>
     </div>
+
     <div class="attribution" id="attribution" style="display: none;"></div>
+
+    <div class="profile-panel interactive" id="profilePanel" style="display: none;">
+      <h4>Elevation Profile <button class="modal-close" id="closeProfile">×</button></h4>
+      <div class="profile-chart"><canvas id="profileChart"></canvas></div>
+      <div class="profile-stats">
+        <span>Distance: <strong id="profileDist">0</strong>m</span>
+        <span>Gain: <strong id="profileGain">0</strong>m</span>
+        <span>Loss: <strong id="profileLoss">0</strong>m</span>
+      </div>
+    </div>
   </div>
 
-  <div class="footer">Drag to rotate • Scroll to zoom • Hover for elevation</div>
+  <div class="footer">
+    Drag to rotate • Scroll to zoom • Arrow keys to pan • R to reset view • F for fullscreen
+  </div>
+
+  <div class="modal" id="embedModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Embed Code</h3>
+        <button class="modal-close" id="closeEmbed">×</button>
+      </div>
+      <p style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">Copy this code to embed the terrain viewer:</p>
+      <textarea id="embedCode" readonly></textarea>
+      <button class="btn primary" style="margin-top: 10px; width: 100%;" id="copyEmbed">Copy to Clipboard</button>
+    </div>
+  </div>
 
 <script>
 const API_URL = 'https://map-api.psiegel.org';
-const GRID_SIZE = 20;
+let GRID_SIZE = 20;
 const TILE_SIZE = 256;
 const TEXTURE_SIZE = 512;
 
-let scene, camera, renderer, mesh, contourLines, currentTexture;
+let scene, camera, renderer, mesh, contourLines, waterPlane, currentTexture, gpxLine;
+let mainLight, ambientLight;
 let elevationData = null;
 let terrainBounds = null;
 let controls = { theta: 0, phi: Math.PI / 4, radius: 90 };
 let isDragging = false, prevX = 0, prevY = 0;
 let inputMode = 'search';
-let viewMode = 'terrain'; // 'terrain', 'streets', 'satellite'
+let viewMode = 'terrain';
 let showContours = false;
+let showWater = false;
+let autoRotate = false;
 let exaggeration = 2;
 let areaSize = 10;
+let sunAngle = 45;
+
+// Measurement/Profile state
+let measureMode = false;
+let profileMode = false;
+let measurePoints = [];
+let profilePoints = [];
+let measureMarkers = [];
+
+// Touch state for pinch zoom
+let initialPinchDistance = 0;
+let initialRadius = 0;
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// Tile URL templates
 const TILE_URLS = {
   streets: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
   satellite: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
 };
 
 const ATTRIBUTIONS = {
-  streets: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
-  satellite: '© <a href="https://www.esri.com" target="_blank">Esri</a>, Maxar, Earthstar Geographics',
+  streets: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+  satellite: '© <a href="https://www.esri.com" target="_blank">Esri</a>',
   terrain: ''
 };
 
+// Recent searches
+let recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+
 function init() {
-  const container = document.querySelector('.canvas-container');
+  const container = document.getElementById('canvasContainer');
   const canvas = document.getElementById('canvas');
 
   scene = new THREE.Scene();
@@ -126,32 +275,117 @@ function init() {
   camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
   updateCamera();
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const light1 = new THREE.DirectionalLight(0xffffff, 0.7);
-  light1.position.set(50, 100, 50);
-  scene.add(light1);
-  const light2 = new THREE.DirectionalLight(0xffffff, 0.3);
-  light2.position.set(-50, 50, -50);
-  scene.add(light2);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+  mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  updateSunPosition();
+  scene.add(mainLight);
 
-  canvas.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+  // Mouse events
+  canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseup', () => isDragging = false);
   canvas.addEventListener('mouseleave', () => { isDragging = false; document.getElementById('hoverInfo').style.display = 'none'; });
-  canvas.addEventListener('wheel', e => { e.preventDefault(); controls.radius = Math.max(30, Math.min(200, controls.radius + e.deltaY * 0.1)); updateCamera(); }, { passive: false });
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('click', onCanvasClick);
 
-  canvas.addEventListener('touchstart', e => { if (e.touches.length === 1) { isDragging = true; prevX = e.touches[0].clientX; prevY = e.touches[0].clientY; } });
-  canvas.addEventListener('touchmove', e => { if (!isDragging || e.touches.length !== 1) return; e.preventDefault(); controls.theta += (e.touches[0].clientX - prevX) * 0.01; controls.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, controls.phi + (e.touches[0].clientY - prevY) * 0.01)); prevX = e.touches[0].clientX; prevY = e.touches[0].clientY; updateCamera(); }, { passive: false });
-  canvas.addEventListener('touchend', () => isDragging = false);
+  // Touch events
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd);
 
-  window.addEventListener('resize', () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); });
+  // Keyboard
+  window.addEventListener('keydown', onKeyDown);
+
+  // Resize
+  window.addEventListener('resize', onResize);
+
+  // Setup UI
+  setupUI();
 
   animate();
   parseURL();
+}
+
+function setupUI() {
+  // Search/Coords toggle
+  document.getElementById('modeSearch').onclick = () => setInputMode('search');
+  document.getElementById('modeCoords').onclick = () => setInputMode('coords');
+
+  // Explore button
+  document.getElementById('exploreBtn').onclick = doSearch;
+  document.getElementById('locationInput').onkeydown = e => { if (e.key === 'Enter') doSearch(); };
+  document.getElementById('latInput').onkeydown = document.getElementById('lonInput').onkeydown = e => { if (e.key === 'Enter') doSearch(); };
+
+  // Recent searches
+  const locInput = document.getElementById('locationInput');
+  locInput.onfocus = showRecentSearches;
+  locInput.oninput = () => document.getElementById('recentDropdown').style.display = 'none';
+  document.addEventListener('click', e => { if (!e.target.closest('.search-wrapper')) document.getElementById('recentDropdown').style.display = 'none'; });
+
+  // Presets
+  document.getElementById('presets').onchange = e => { if (e.target.value) { document.getElementById('locationInput').value = e.target.value; doSearch(); e.target.value = ''; } };
+
+  // Controls
+  document.getElementById('areaSize').oninput = e => { areaSize = parseInt(e.target.value); document.getElementById('areaSizeVal').textContent = areaSize + 'km'; };
+  document.getElementById('exaggeration').oninput = e => { exaggeration = parseFloat(e.target.value); document.getElementById('exaggerationVal').textContent = exaggeration + 'x'; buildTerrain(); };
+  document.getElementById('sunAngle').oninput = e => { sunAngle = parseInt(e.target.value); document.getElementById('sunAngleVal').textContent = sunAngle + '°'; updateSunPosition(); };
+  document.getElementById('gridSize').onchange = e => { GRID_SIZE = parseInt(e.target.value); };
+
+  // View modes
+  document.getElementById('viewTerrain').onclick = () => setViewMode('terrain');
+  document.getElementById('viewStreets').onclick = () => setViewMode('streets');
+  document.getElementById('viewSatellite').onclick = () => setViewMode('satellite');
+
+  // Toggles
+  document.getElementById('showContours').onchange = e => { showContours = e.target.checked; buildTerrain(); };
+  document.getElementById('showWater').onchange = e => { showWater = e.target.checked; updateWaterPlane(); };
+  document.getElementById('autoRotate').onchange = e => { autoRotate = e.target.checked; };
+
+  // Tools
+  document.getElementById('measureBtn').onclick = toggleMeasureMode;
+  document.getElementById('profileBtn').onclick = toggleProfileMode;
+  document.getElementById('closeProfile').onclick = () => { document.getElementById('profilePanel').style.display = 'none'; clearProfilePoints(); };
+
+  // GPX/KML
+  document.getElementById('gpxInput').onchange = handleGPXUpload;
+
+  // Toolbar buttons
+  document.getElementById('screenshotBtn').onclick = takeScreenshot;
+  document.getElementById('shareBtn').onclick = copyShareLink;
+  document.getElementById('embedBtn').onclick = showEmbedModal;
+  document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+  document.getElementById('closeEmbed').onclick = () => document.getElementById('embedModal').style.display = 'none';
+  document.getElementById('copyEmbed').onclick = copyEmbedCode;
+  document.getElementById('embedModal').onclick = e => { if (e.target.id === 'embedModal') e.target.style.display = 'none'; };
+}
+
+function doSearch() {
+  if (inputMode === 'coords') {
+    search(null, document.getElementById('latInput').value, document.getElementById('lonInput').value);
+  } else {
+    search(document.getElementById('locationInput').value);
+  }
+}
+
+function showRecentSearches() {
+  if (recentSearches.length === 0) return;
+  const dropdown = document.getElementById('recentDropdown');
+  dropdown.innerHTML = recentSearches.map(s => `<div>${s}</div>`).join('');
+  dropdown.querySelectorAll('div').forEach((d, i) => {
+    d.onclick = () => { document.getElementById('locationInput').value = recentSearches[i]; dropdown.style.display = 'none'; doSearch(); };
+  });
+  dropdown.style.display = 'block';
+}
+
+function addRecentSearch(query) {
+  if (!query) return;
+  recentSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 10);
+  localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
 }
 
 function updateCamera() {
@@ -159,6 +393,50 @@ function updateCamera() {
   camera.position.y = controls.radius * Math.cos(controls.phi);
   camera.position.z = controls.radius * Math.sin(controls.phi) * Math.cos(controls.theta);
   camera.lookAt(0, 0, 0);
+  updateCompass();
+  updateScaleBar();
+}
+
+function updateCompass() {
+  const needle = document.getElementById('compassNeedle');
+  if (needle) {
+    const angle = -controls.theta * 180 / Math.PI;
+    needle.setAttribute('transform', `rotate(${angle}, 50, 50)`);
+  }
+}
+
+function updateScaleBar() {
+  if (!terrainBounds) return;
+  const scaleBar = document.getElementById('scaleBar');
+  const scaleText = document.getElementById('scaleText');
+  const scaleBarInner = document.getElementById('scaleBarInner');
+
+  // Calculate scale based on view
+  const kmPerUnit = areaSize / 80;
+  const visibleKm = controls.radius * 0.5 * kmPerUnit;
+
+  let scaleKm = 1;
+  if (visibleKm > 50) scaleKm = 20;
+  else if (visibleKm > 20) scaleKm = 10;
+  else if (visibleKm > 10) scaleKm = 5;
+  else if (visibleKm > 5) scaleKm = 2;
+
+  const barWidth = (scaleKm / visibleKm) * 80;
+  scaleText.textContent = scaleKm >= 1 ? `${scaleKm} km` : `${scaleKm * 1000} m`;
+  scaleBarInner.style.width = Math.min(100, Math.max(30, barWidth)) + 'px';
+  scaleBar.style.display = 'block';
+}
+
+function updateSunPosition() {
+  if (!mainLight) return;
+  const rad = sunAngle * Math.PI / 180;
+  mainLight.position.set(Math.cos(rad) * 100, 80, Math.sin(rad) * 100);
+}
+
+function onMouseDown(e) {
+  isDragging = true;
+  prevX = e.clientX;
+  prevY = e.clientY;
 }
 
 function onMouseMove(e) {
@@ -174,14 +452,447 @@ function onMouseMove(e) {
   }
 }
 
+function onWheel(e) {
+  e.preventDefault();
+  controls.radius = Math.max(20, Math.min(300, controls.radius + e.deltaY * 0.1));
+  updateCamera();
+}
+
+function onTouchStart(e) {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    initialPinchDistance = getPinchDistance(e.touches);
+    initialRadius = controls.radius;
+  }
+}
+
+function onTouchMove(e) {
+  e.preventDefault();
+  if (e.touches.length === 1 && isDragging) {
+    controls.theta += (e.touches[0].clientX - prevX) * 0.01;
+    controls.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.1, controls.phi + (e.touches[0].clientY - prevY) * 0.01));
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+    updateCamera();
+  } else if (e.touches.length === 2) {
+    const currentDistance = getPinchDistance(e.touches);
+    const scale = initialPinchDistance / currentDistance;
+    controls.radius = Math.max(20, Math.min(300, initialRadius * scale));
+    updateCamera();
+  }
+}
+
+function onTouchEnd() {
+  isDragging = false;
+}
+
+function getPinchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function onKeyDown(e) {
+  const step = 0.1;
+  switch(e.key) {
+    case 'ArrowLeft': controls.theta -= step; updateCamera(); break;
+    case 'ArrowRight': controls.theta += step; updateCamera(); break;
+    case 'ArrowUp': controls.phi = Math.max(0.1, controls.phi - step); updateCamera(); break;
+    case 'ArrowDown': controls.phi = Math.min(Math.PI/2 - 0.1, controls.phi + step); updateCamera(); break;
+    case '+': case '=': controls.radius = Math.max(20, controls.radius - 10); updateCamera(); break;
+    case '-': controls.radius = Math.min(300, controls.radius + 10); updateCamera(); break;
+    case 'r': case 'R': resetView(); break;
+    case 'f': case 'F': toggleFullscreen(); break;
+    case 'Escape': exitModes(); break;
+  }
+}
+
+function resetView() {
+  controls = { theta: 0, phi: Math.PI / 4, radius: 90 };
+  updateCamera();
+}
+
+function exitModes() {
+  if (measureMode) toggleMeasureMode();
+  if (profileMode) toggleProfileMode();
+  document.getElementById('embedModal').style.display = 'none';
+  if (document.fullscreenElement) document.exitFullscreen();
+}
+
+function onResize() {
+  const container = document.getElementById('canvasContainer');
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+function onCanvasClick(e) {
+  if (!mesh || !elevationData) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(mesh);
+
+  if (intersects.length > 0) {
+    const point = intersects[0].point.clone();
+
+    if (measureMode) {
+      handleMeasureClick(point);
+    } else if (profileMode) {
+      handleProfileClick(point);
+    }
+  }
+}
+
+// Measurement functions
+function toggleMeasureMode() {
+  measureMode = !measureMode;
+  profileMode = false;
+  document.getElementById('measureBtn').classList.toggle('active', measureMode);
+  document.getElementById('profileBtn').classList.remove('active');
+  if (!measureMode) clearMeasurePoints();
+  showToast(measureMode ? 'Click two points to measure distance' : 'Measure mode off');
+}
+
+function handleMeasureClick(point) {
+  measurePoints.push(point);
+  addMarker(point, 0xff6b6b);
+
+  if (measurePoints.length === 2) {
+    const dist = measurePoints[0].distanceTo(measurePoints[1]);
+    const realDist = dist * areaSize / 80 * 1000; // Convert to meters
+    document.getElementById('measureDist').textContent = realDist.toFixed(0);
+    document.getElementById('measureInfo').style.display = 'block';
+
+    // Draw line
+    const geo = new THREE.BufferGeometry().setFromPoints(measurePoints);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xff6b6b, linewidth: 2 }));
+    line.name = 'measureLine';
+    scene.add(line);
+
+    setTimeout(() => { clearMeasurePoints(); toggleMeasureMode(); }, 3000);
+  }
+}
+
+function clearMeasurePoints() {
+  measurePoints = [];
+  measureMarkers.forEach(m => scene.remove(m));
+  measureMarkers = [];
+  const line = scene.getObjectByName('measureLine');
+  if (line) scene.remove(line);
+  document.getElementById('measureInfo').style.display = 'none';
+}
+
+// Profile functions
+function toggleProfileMode() {
+  profileMode = !profileMode;
+  measureMode = false;
+  document.getElementById('profileBtn').classList.toggle('active', profileMode);
+  document.getElementById('measureBtn').classList.remove('active');
+  if (!profileMode) clearProfilePoints();
+  showToast(profileMode ? 'Click two points for elevation profile' : 'Profile mode off');
+}
+
+function handleProfileClick(point) {
+  profilePoints.push(point);
+  addMarker(point, 0x6366f1);
+
+  if (profilePoints.length === 2) {
+    showElevationProfile();
+    toggleProfileMode();
+  }
+}
+
+function clearProfilePoints() {
+  profilePoints = [];
+  measureMarkers.forEach(m => scene.remove(m));
+  measureMarkers = [];
+  const line = scene.getObjectByName('profileLine');
+  if (line) scene.remove(line);
+}
+
+function showElevationProfile() {
+  if (!elevationData || profilePoints.length !== 2) return;
+
+  const { elevations, minE, maxE, grid } = elevationData;
+  const p1 = profilePoints[0], p2 = profilePoints[1];
+
+  // Draw line on terrain
+  const geo = new THREE.BufferGeometry().setFromPoints(profilePoints);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x6366f1, linewidth: 2 }));
+  line.name = 'profileLine';
+  scene.add(line);
+
+  // Sample elevations along the line
+  const samples = 50;
+  const profileData = [];
+  let totalGain = 0, totalLoss = 0, prevElev = null;
+
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const x = p1.x + (p2.x - p1.x) * t;
+    const z = p1.z + (p2.z - p1.z) * t;
+
+    // Convert to grid coords
+    const gx = Math.round((x + 40) / 80 * (grid - 1));
+    const gz = Math.round((z + 40) / 80 * (grid - 1));
+    const idx = gz * grid + gx;
+    const elev = elevations[idx] ?? minE;
+
+    profileData.push(elev);
+
+    if (prevElev !== null) {
+      const diff = elev - prevElev;
+      if (diff > 0) totalGain += diff;
+      else totalLoss -= diff;
+    }
+    prevElev = elev;
+  }
+
+  // Calculate distance
+  const dist = p1.distanceTo(p2) * areaSize / 80 * 1000;
+
+  // Draw chart
+  const canvas = document.getElementById('profileChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const minP = Math.min(...profileData), maxP = Math.max(...profileData);
+  const range = maxP - minP || 1;
+
+  ctx.fillStyle = '#252540';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  profileData.forEach((elev, i) => {
+    const x = (i / samples) * w;
+    const y = h - ((elev - minP) / range) * (h - 10) - 5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(99, 102, 241, 0.3)';
+  ctx.fill();
+
+  ctx.beginPath();
+  profileData.forEach((elev, i) => {
+    const x = (i / samples) * w;
+    const y = h - ((elev - minP) / range) * (h - 10) - 5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Update stats
+  document.getElementById('profileDist').textContent = dist.toFixed(0);
+  document.getElementById('profileGain').textContent = totalGain.toFixed(0);
+  document.getElementById('profileLoss').textContent = totalLoss.toFixed(0);
+  document.getElementById('profilePanel').style.display = 'block';
+}
+
+function addMarker(point, color) {
+  const geo = new THREE.SphereGeometry(1, 16, 16);
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const marker = new THREE.Mesh(geo, mat);
+  marker.position.copy(point);
+  marker.position.y += 1;
+  scene.add(marker);
+  measureMarkers.push(marker);
+}
+
+// GPX/KML handling
+function handleGPXUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const text = event.target.result;
+    const points = parseGPX(text);
+    if (points.length > 0) {
+      drawGPXPath(points);
+      showToast(`Loaded ${points.length} track points`);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function parseGPX(text) {
+  const points = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'text/xml');
+
+  // Try GPX format
+  const trkpts = doc.querySelectorAll('trkpt');
+  trkpts.forEach(pt => {
+    points.push({
+      lat: parseFloat(pt.getAttribute('lat')),
+      lon: parseFloat(pt.getAttribute('lon')),
+      ele: parseFloat(pt.querySelector('ele')?.textContent || 0)
+    });
+  });
+
+  // Try KML format if no GPX points
+  if (points.length === 0) {
+    const coords = doc.querySelectorAll('coordinates');
+    coords.forEach(c => {
+      c.textContent.trim().split(/\s+/).forEach(coord => {
+        const [lon, lat, ele] = coord.split(',').map(parseFloat);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          points.push({ lat, lon, ele: ele || 0 });
+        }
+      });
+    });
+  }
+
+  return points;
+}
+
+function drawGPXPath(points) {
+  if (!terrainBounds || !elevationData) return;
+  if (gpxLine) { scene.remove(gpxLine); gpxLine = null; }
+
+  const { latMin, latMax, lonMin, lonMax } = terrainBounds;
+  const { minE, maxE, grid } = elevationData;
+  const range = maxE - minE || 1;
+
+  const linePoints = [];
+  points.forEach(p => {
+    // Convert lat/lon to terrain coords
+    const x = ((p.lon - lonMin) / (lonMax - lonMin) - 0.5) * 80;
+    const z = ((latMax - p.lat) / (latMax - latMin) - 0.5) * 80;
+
+    // Get elevation at this point
+    const gx = Math.round((x + 40) / 80 * (grid - 1));
+    const gz = Math.round((z + 40) / 80 * (grid - 1));
+    const idx = Math.max(0, Math.min(grid * grid - 1, gz * grid + gx));
+    const elev = elevationData.elevations[idx] ?? minE;
+    const y = ((elev - minE) / range) * 30 * exaggeration + 0.5;
+
+    if (x >= -40 && x <= 40 && z >= -40 && z <= 40) {
+      linePoints.push(new THREE.Vector3(x, y, z));
+    }
+  });
+
+  if (linePoints.length > 1) {
+    const geo = new THREE.BufferGeometry().setFromPoints(linePoints);
+    gpxLine = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 3 }));
+    scene.add(gpxLine);
+  }
+}
+
+// Water plane
+function updateWaterPlane() {
+  if (waterPlane) { scene.remove(waterPlane); waterPlane = null; }
+
+  if (showWater && elevationData) {
+    const { minE, maxE } = elevationData;
+    const seaLevel = 0;
+
+    if (minE <= seaLevel) {
+      const y = ((seaLevel - minE) / (maxE - minE || 1)) * 30 * exaggeration;
+      const geo = new THREE.PlaneGeometry(85, 85);
+      geo.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshPhongMaterial({
+        color: 0x1e90ff,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+      });
+      waterPlane = new THREE.Mesh(geo, mat);
+      waterPlane.position.y = y;
+      scene.add(waterPlane);
+    }
+  }
+}
+
+// Screenshot, Share, Embed
+function takeScreenshot() {
+  renderer.render(scene, camera);
+  const link = document.createElement('a');
+  link.download = 'terrain-' + Date.now() + '.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
+  showToast('Screenshot saved!');
+}
+
+function copyShareLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    showToast('Link copied to clipboard!');
+  });
+}
+
+function showEmbedModal() {
+  const url = window.location.href;
+  const code = `<iframe src="${url}" width="800" height="600" frameborder="0" allowfullscreen></iframe>`;
+  document.getElementById('embedCode').value = code;
+  document.getElementById('embedModal').style.display = 'flex';
+}
+
+function copyEmbedCode() {
+  const textarea = document.getElementById('embedCode');
+  textarea.select();
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    showToast('Embed code copied!');
+  });
+}
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+    document.body.classList.remove('fullscreen');
+  } else {
+    document.documentElement.requestFullscreen();
+    document.body.classList.add('fullscreen');
+  }
+}
+
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+function showLoading(show, text = 'Loading terrain...', progress = 0) {
+  const el = document.getElementById('loading');
+  el.style.display = show ? 'flex' : 'none';
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('progressFill').style.width = progress + '%';
+}
+
 function animate() {
   requestAnimationFrame(animate);
+
+  if (autoRotate) {
+    controls.theta += 0.003;
+    updateCamera();
+  }
 
   if (mesh && elevationData) {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(mesh);
     const hoverInfo = document.getElementById('hoverInfo');
-    if (intersects.length > 0) {
+    if (intersects.length > 0 && !measureMode && !profileMode) {
       const { minE, maxE } = elevationData;
       const range = maxE - minE || 1;
       const normalizedY = intersects[0].point.y / (30 * exaggeration);
@@ -196,14 +907,13 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// Convert lat/lon to tile coordinates
+// Tile functions
 function latLonToTile(lat, lon, zoom) {
   const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
   const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
   return { x, y };
 }
 
-// Convert tile coordinates to lat/lon bounds
 function tileToBounds(x, y, zoom) {
   const n = Math.pow(2, zoom);
   const lonLeft = x / n * 360 - 180;
@@ -213,45 +923,26 @@ function tileToBounds(x, y, zoom) {
   return { latTop, latBottom, lonLeft, lonRight };
 }
 
-// Calculate appropriate zoom level for area size
 function getZoomForArea(areaKm) {
-  // Rough approximation: at zoom 10, a tile covers about 40km
-  // Each zoom level halves the coverage
   const baseZoom = 10;
   const baseKm = 40;
   const zoom = Math.round(baseZoom + Math.log2(baseKm / areaKm));
   return Math.max(1, Math.min(18, zoom));
 }
 
-// Fetch and stitch map tiles into a texture
 async function fetchMapTexture(type) {
   if (!terrainBounds) return null;
 
   const { centerLat, centerLon, latMin, latMax, lonMin, lonMax } = terrainBounds;
   const zoom = getZoomForArea(areaSize);
-
-  // Get tile range that covers our bounds
   const topLeft = latLonToTile(latMax, lonMin, zoom);
   const bottomRight = latLonToTile(latMin, lonMax, zoom);
 
-  const tilesX = bottomRight.x - topLeft.x + 1;
-  const tilesY = bottomRight.y - topLeft.y + 1;
-
-  // Create canvas to stitch tiles
   const canvas = document.createElement('canvas');
   canvas.width = TEXTURE_SIZE;
   canvas.height = TEXTURE_SIZE;
   const ctx = canvas.getContext('2d');
 
-  // Calculate the bounds of all tiles we're fetching
-  const tilesBounds = tileToBounds(topLeft.x, topLeft.y, zoom);
-  const tilesEndBounds = tileToBounds(bottomRight.x, bottomRight.y, zoom);
-  const tilesLatTop = tilesBounds.latTop;
-  const tilesLatBottom = tilesEndBounds.latBottom;
-  const tilesLonLeft = tilesBounds.lonLeft;
-  const tilesLonRight = tilesEndBounds.lonRight;
-
-  // Fetch all tiles
   const tilePromises = [];
   for (let ty = topLeft.y; ty <= bottomRight.y; ty++) {
     for (let tx = topLeft.x; tx <= bottomRight.x; tx++) {
@@ -270,25 +961,14 @@ async function fetchMapTexture(type) {
 
   const tiles = await Promise.all(tilePromises);
 
-  // Draw tiles to canvas, mapping our terrain bounds to the texture
   for (const { img, tx, ty } of tiles) {
     if (!img) continue;
-
-    // Calculate where this tile goes on the canvas
     const tileBounds = tileToBounds(tx, ty, zoom);
-
-    // Map tile position to our terrain bounds
     const xStart = (tileBounds.lonLeft - lonMin) / (lonMax - lonMin);
     const xEnd = (tileBounds.lonRight - lonMin) / (lonMax - lonMin);
     const yStart = (latMax - tileBounds.latTop) / (latMax - latMin);
     const yEnd = (latMax - tileBounds.latBottom) / (latMax - latMin);
-
-    const dx = xStart * TEXTURE_SIZE;
-    const dy = yStart * TEXTURE_SIZE;
-    const dw = (xEnd - xStart) * TEXTURE_SIZE;
-    const dh = (yEnd - yStart) * TEXTURE_SIZE;
-
-    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.drawImage(img, xStart * TEXTURE_SIZE, yStart * TEXTURE_SIZE, (xEnd - xStart) * TEXTURE_SIZE, (yEnd - yStart) * TEXTURE_SIZE);
   }
 
   return new THREE.CanvasTexture(canvas);
@@ -315,7 +995,6 @@ async function buildTerrain() {
   const pos = geo.attributes.position;
   const range = maxE - minE || 1;
 
-  // Set elevation heights
   for (let i = 0; i < pos.count; i++) {
     const elev = elevations[i] ?? minE;
     const normalized = (elev - minE) / range;
@@ -323,12 +1002,10 @@ async function buildTerrain() {
   }
   geo.computeVertexNormals();
 
-  // Create material based on view mode
   let material;
   const attrEl = document.getElementById('attribution');
 
   if (viewMode === 'terrain') {
-    // Use vertex colors for terrain mode
     const colors = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       const elev = elevations[i] ?? minE;
@@ -340,13 +1017,11 @@ async function buildTerrain() {
     material = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, shininess: 10 });
     attrEl.style.display = 'none';
   } else {
-    // Fetch map tiles and create texture
     const texture = await fetchMapTexture(viewMode);
     if (texture) {
       currentTexture = texture;
       material = new THREE.MeshPhongMaterial({ map: texture, side: THREE.DoubleSide, shininess: 5 });
     } else {
-      // Fallback to white if texture fails
       material = new THREE.MeshPhongMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
     }
     attrEl.innerHTML = ATTRIBUTIONS[viewMode];
@@ -357,6 +1032,13 @@ async function buildTerrain() {
   scene.add(mesh);
 
   if (showContours) buildContours();
+  updateWaterPlane();
+
+  // Re-draw GPX if exists
+  if (gpxLine) {
+    const points = gpxLine.geometry.attributes.position;
+    // GPX will need to be re-uploaded after terrain change
+  }
 }
 
 function buildContours() {
@@ -396,19 +1078,23 @@ function buildContours() {
 async function search(query, lat, lon) {
   const btn = document.getElementById('exploreBtn');
   const errorEl = document.getElementById('error');
-  btn.disabled = true; btn.textContent = 'Loading...';
+  btn.disabled = true;
   errorEl.style.display = 'none';
+  showLoading(true, 'Finding location...', 10);
 
   try {
     let url = query ? `${API_URL}?q=${encodeURIComponent(query)}&size=${areaSize}&grid=${GRID_SIZE}` : `${API_URL}?lat=${lat}&lon=${lon}&size=${areaSize}&grid=${GRID_SIZE}`;
+
+    showLoading(true, 'Fetching elevation data...', 30);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
+    showLoading(true, 'Building terrain...', 70);
+
     elevationData = { elevations: data.elevations, minE: data.minElev, maxE: data.maxElev, grid: data.grid };
 
-    // Calculate terrain bounds for tile fetching
     const centerLat = data.center[0];
     const centerLon = data.center[1];
     const kmPerDegLat = 111;
@@ -416,21 +1102,20 @@ async function search(query, lat, lon) {
     const halfSizeLat = areaSize / 2 / kmPerDegLat;
     const halfSizeLon = areaSize / 2 / kmPerDegLon;
 
-    terrainBounds = {
-      centerLat,
-      centerLon,
-      latMin: centerLat - halfSizeLat,
-      latMax: centerLat + halfSizeLat,
-      lonMin: centerLon - halfSizeLon,
-      lonMax: centerLon + halfSizeLon
-    };
+    terrainBounds = { centerLat, centerLon, latMin: centerLat - halfSizeLat, latMax: centerLat + halfSizeLat, lonMin: centerLon - halfSizeLon, lonMax: centerLon + halfSizeLon };
 
     await buildTerrain();
+
+    showLoading(true, 'Done!', 100);
+    setTimeout(() => showLoading(false), 300);
 
     document.getElementById('terrainName').textContent = data.name;
     document.getElementById('terrainDetails').innerHTML = `Elevation: ${data.minElev.toFixed(0)}m – ${data.maxElev.toFixed(0)}m (${(data.maxElev - data.minElev).toFixed(0)}m range)<br>Center: ${data.center[0].toFixed(4)}°, ${data.center[1].toFixed(4)}°`;
     document.getElementById('terrainInfo').style.display = 'block';
     document.getElementById('placeholder').style.display = 'none';
+
+    // Save to recent searches
+    if (query) addRecentSearch(query);
 
     const params = new URLSearchParams();
     if (query) params.set('q', query); else { params.set('lat', lat); params.set('lon', lon); }
@@ -438,11 +1123,12 @@ async function search(query, lat, lon) {
     history.replaceState({}, '', '?' + params.toString());
 
   } catch (e) {
+    showLoading(false);
     errorEl.textContent = '⚠️ ' + e.message;
     errorEl.style.display = 'block';
   }
 
-  btn.disabled = false; btn.textContent = 'Explore';
+  btn.disabled = false;
 }
 
 function parseURL() {
@@ -458,7 +1144,7 @@ function setInputMode(mode) {
   inputMode = mode;
   document.getElementById('modeSearch').classList.toggle('active', mode === 'search');
   document.getElementById('modeCoords').classList.toggle('active', mode === 'coords');
-  document.getElementById('searchInputs').style.display = mode === 'search' ? 'contents' : 'none';
+  document.getElementById('searchInputs').style.display = mode === 'search' ? 'flex' : 'none';
   document.getElementById('coordInputs').style.display = mode === 'coords' ? 'flex' : 'none';
 }
 
@@ -469,18 +1155,6 @@ function setViewMode(mode) {
   document.getElementById('viewSatellite').classList.toggle('active', mode === 'satellite');
   buildTerrain();
 }
-
-document.getElementById('modeSearch').onclick = () => setInputMode('search');
-document.getElementById('modeCoords').onclick = () => setInputMode('coords');
-document.getElementById('exploreBtn').onclick = () => inputMode === 'coords' ? search(null, document.getElementById('latInput').value, document.getElementById('lonInput').value) : search(document.getElementById('locationInput').value);
-document.getElementById('locationInput').onkeydown = e => { if (e.key === 'Enter') search(e.target.value); };
-document.getElementById('latInput').onkeydown = document.getElementById('lonInput').onkeydown = e => { if (e.key === 'Enter') search(null, document.getElementById('latInput').value, document.getElementById('lonInput').value); };
-document.getElementById('areaSize').oninput = e => { areaSize = parseInt(e.target.value); document.getElementById('areaSizeVal').textContent = areaSize + 'km'; };
-document.getElementById('exaggeration').oninput = e => { exaggeration = parseFloat(e.target.value); document.getElementById('exaggerationVal').textContent = exaggeration + 'x'; buildTerrain(); };
-document.getElementById('viewTerrain').onclick = () => setViewMode('terrain');
-document.getElementById('viewStreets').onclick = () => setViewMode('streets');
-document.getElementById('viewSatellite').onclick = () => setViewMode('satellite');
-document.getElementById('showContours').onchange = e => { showContours = e.target.checked; buildTerrain(); };
 
 init();
 </script>
