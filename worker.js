@@ -122,8 +122,9 @@ export default {
         }
 
         // Rate limit: wait between batches (except for last batch)
+        // Open-Topo-Data requires 1 second between requests
         if (i + BATCH_SIZE < locations.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 1100));
         }
       }
 
