@@ -43,6 +43,28 @@ export default Sentry.withSentry(
       }
 
       const url = new URL(request.url);
+
+      // Debug endpoint to test Sentry integration
+      if (url.pathname === '/debug-sentry') {
+        Sentry.setTag('test_type', 'debug_endpoint');
+
+        // Send a test message
+        Sentry.captureMessage('Sentry test from terrain-api worker', 'info');
+
+        // Optionally throw an error to test error capture
+        if (url.searchParams.get('error') === 'true') {
+          throw new Error('Test error from /debug-sentry endpoint');
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Test message sent to Sentry. Check your Sentry dashboard.',
+          tip: 'Add ?error=true to test error capture'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       const q = url.searchParams.get('q');
       const lat = url.searchParams.get('lat');
       const lon = url.searchParams.get('lon');
