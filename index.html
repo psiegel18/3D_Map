@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Terrain Explorer</title>
+  <script src="https://js.sentry-cdn.com/9f4f6a253d12986ff51e7514db9e436c.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -81,6 +82,26 @@
   <div class="footer">Drag to rotate • Scroll to zoom • Hover for elevation</div>
 
 <script>
+// Initialize Sentry for frontend error tracking
+Sentry.onLoad(function() {
+  Sentry.init({
+    // Performance monitoring
+    tracesSampleRate: 0.2,
+
+    // Session Replay for debugging UI issues
+    replaysSessionSampleRate: 0.1,  // 10% of sessions
+    replaysOnErrorSampleRate: 1.0,  // 100% of sessions with errors
+
+    // Tag to differentiate from backend
+    initialScope: {
+      tags: {
+        service: '3d-map',
+        component: 'frontend'
+      }
+    }
+  });
+});
+
 const API_URL = 'https://map-api.psiegel.org';
 const GRID_SIZE = 20;
 
@@ -263,7 +284,12 @@ async function search(query, lat, lon) {
   const errorEl = document.getElementById('error');
   btn.disabled = true; btn.textContent = 'Loading...';
   errorEl.style.display = 'none';
-  
+
+  // Set Sentry context for this search
+  Sentry.setTag('search_type', query ? 'query' : 'coordinates');
+  Sentry.setTag('area_size_km', areaSize.toString());
+  if (query) Sentry.setTag('location_query', query.slice(0, 100));
+
   try {
     let url = query ? `${API_URL}?q=${encodeURIComponent(query)}&size=${areaSize}&grid=${GRID_SIZE}` : `${API_URL}?lat=${lat}&lon=${lon}&size=${areaSize}&grid=${GRID_SIZE}`;
     const res = await fetch(url);
@@ -285,10 +311,14 @@ async function search(query, lat, lon) {
     history.replaceState({}, '', '?' + params.toString());
     
   } catch (e) {
+    Sentry.captureException(e, {
+      tags: { error_source: 'search_function' },
+      extra: { query, lat, lon, areaSize }
+    });
     errorEl.textContent = '⚠️ ' + e.message;
     errorEl.style.display = 'block';
   }
-  
+
   btn.disabled = false; btn.textContent = 'Explore';
 }
 

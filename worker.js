@@ -44,6 +44,10 @@ export default Sentry.withSentry(
 
       const url = new URL(request.url);
 
+      // Tag all events from this worker to differentiate from frontend
+      Sentry.setTag('service', 'map-api');
+      Sentry.setTag('component', 'backend');
+
       // Debug endpoint to test Sentry integration
       if (url.pathname === '/debug-sentry') {
         Sentry.setTag('test_type', 'debug_endpoint');
