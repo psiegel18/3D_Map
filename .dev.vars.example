@@ -1,0 +1,9 @@
+# Copy this file to .dev.vars and fill in your values
+# These are used for local development with `wrangler dev`
+
+# Sentry DSN for error tracking
+# Get this from your Sentry project settings
+SENTRY_DSN=https://your-dsn@sentry.io/your-project-id
+
+# Environment name (optional, defaults to 'production')
+ENVIRONMENT=development

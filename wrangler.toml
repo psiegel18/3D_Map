@@ -2,6 +2,9 @@ name = "terrain-api"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
+# Required for Sentry SDK (AsyncLocalStorage support)
+compatibility_flags = ["nodejs_als"]
+
 # Custom domain route
 routes = [{ pattern = "map-api.psiegel.org", custom_domain = true }]
 
@@ -10,11 +13,18 @@ routes = [{ pattern = "map-api.psiegel.org", custom_domain = true }]
 binding = "CACHE"
 id = "6153cffbc3b949b38fca729d58a85fee"
 
+# Version metadata for Sentry release tracking
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+# Enable source maps for readable Sentry stack traces
+upload_source_maps = true
+
 [observability]
-enabled = false
+enabled = true
 
 [observability.logs]
-enabled = false
+enabled = true
 head_sampling_rate = 1
 invocation_logs = true
 persist = true
