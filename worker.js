@@ -48,9 +48,41 @@ export default Sentry.withSentry(
       Sentry.setTag('service', 'map-api');
       Sentry.setTag('component', 'backend');
 
-      // Debug endpoint to test Sentry integration
+      // Debug endpoint to test Sentry integration (admin only)
       if (url.pathname === '/debug-sentry') {
         Sentry.setTag('test_type', 'debug_endpoint');
+
+        // Check for admin authentication
+        const adminKey = env.ADMIN_API_KEY;
+        if (!adminKey) {
+          Sentry.setTag('auth_error', 'key_not_configured');
+          return new Response(JSON.stringify({
+            error: 'Admin endpoint not configured'
+          }), {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Accept token via Authorization header (Bearer token) or query parameter
+        const authHeader = request.headers.get('Authorization');
+        const queryKey = url.searchParams.get('key');
+        const providedKey = authHeader?.startsWith('Bearer ')
+          ? authHeader.slice(7)
+          : queryKey;
+
+        if (!providedKey || providedKey !== adminKey) {
+          Sentry.setTag('auth_error', 'unauthorized');
+          return new Response(JSON.stringify({
+            error: 'Unauthorized. Admin access required.',
+            hint: 'Provide API key via Authorization: Bearer <key> header or ?key=<key> parameter'
+          }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        Sentry.setTag('auth_status', 'authorized');
 
         // Send a test message
         Sentry.captureMessage('Sentry test from terrain-api worker', 'info');
