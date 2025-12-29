@@ -7,3 +7,7 @@ SENTRY_DSN=https://your-dsn@sentry.io/your-project-id
 
 # Environment name (optional, defaults to 'production')
 ENVIRONMENT=development
+
+# Admin API key for accessing protected endpoints (e.g., /debug-sentry)
+# Generate a secure random string for production use
+ADMIN_API_KEY=your-admin-api-key-here
