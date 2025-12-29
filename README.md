@@ -2,7 +2,7 @@
 
 Interactive 3D topographical map viewer using real elevation data. Search any location on Earth and explore its terrain in 3D.
 
-**Live:** [3d-map.psiegel.org](https://3d-map.psiegel.org)
+**Live:** [3d-map.psiegel.org](https://3d-map.psiegel.org) 
 
 ## Features
 
