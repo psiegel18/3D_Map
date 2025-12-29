@@ -92,6 +92,13 @@ Sentry.onLoad(function() {
     replaysSessionSampleRate: 0.1,  // 10% of sessions
     replaysOnErrorSampleRate: 1.0,  // 100% of sessions with errors
 
+    // Disable privacy masking - this app has no sensitive data
+    replaysOptions: {
+      maskAllText: false,
+      maskAllInputs: false,
+      blockAllMedia: false
+    },
+
     // Tag to differentiate from backend
     initialScope: {
       tags: {
